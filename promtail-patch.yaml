@@ -1,0 +1,10 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: promtail
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
