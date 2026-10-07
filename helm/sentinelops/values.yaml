@@ -1,0 +1,18 @@
+image:
+  registry: ghcr.io/1priyansh
+  prefix: sentinelops-
+  tag: latest            # CI also publishes a tag per commit SHA; pin one for real releases
+  pullPolicy: IfNotPresent
+
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {cpu: 250m, memory: 256Mi}
+
+services:
+  - name: gateway
+  - name: user-service
+  - name: product-service
+  - name: order-service
+  - name: payment-service
+  - name: ai-incident-assistant
+    envFromSecret: ai-keys   # optional Secret holding ANTHROPIC_API_KEY

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sentinelops
+description: SentinelOps microservices (gateway, user, product, order, payment, AI incident assistant)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
