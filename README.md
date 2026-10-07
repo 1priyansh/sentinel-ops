@@ -1,5 +1,7 @@
 # SentinelOps
 
+![CI](https://github.com/1priyansh/sentinel-ops/actions/workflows/ci.yml/badge.svg)
+
 A microservices platform on Kubernetes with full observability (Prometheus, Grafana, Loki) and an AI-assisted incident workflow. When something breaks, an alert fires, a ticket is created automatically with a root-cause summary, MTTR is tracked, and the ticket resolves itself when the system recovers.
 
 > Personal lab project built to practice the full DevOps lifecycle: deploy, observe, break, detect, respond, recover.
