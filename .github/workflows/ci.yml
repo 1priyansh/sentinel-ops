@@ -52,12 +52,11 @@ jobs:
           tags: sentinelops/${{ matrix.service }}:ci
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: sentinelops/${{ matrix.service }}:ci
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:0.69.3 image \
+            --severity CRITICAL --ignore-unfixed --exit-code 1 \
+            sentinelops/${{ matrix.service }}:ci
 
       - name: Lowercase owner name (GHCR requires lowercase)
         if: github.event_name == 'push'
