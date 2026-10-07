@@ -8,23 +8,23 @@ A microservices platform on Kubernetes with full observability (Prometheus, Graf
 
 ### 1. Alert firing in Prometheus
 
-![Prometheus alert firing](images/Alert_Trigger_Active.png)
+![Prometheus alert firing](Images/Alert_Trigger_Active.png)
 
 ### 2. Error logs in Grafana (Loki)
 
-![Loki error logs](images/Grafana_loki_Fail.png)
+![Loki error logs](Images/Grafana_loki_Fail.png)
 
 ### 3. AI-generated incident ticket (Open)
 
-![Incident open](images/Incident_open_JSON.png)
+![Incident open](Images/Incident_open_JSON.png)
 
 ### 4. Incident resolved with MTTR
 
-![Incident resolved](images/Incident_resolved_mttr_sec_JSON.png)
+![Incident resolved](Images/Incident_resolved_mttr_sec_JSON.png)
 
 ### 5. All pods running on Kubernetes
 
-![Pods running](images/PODs_Running.png)
+![Pods running](Images/PODs_Running.png)
 
 ## Architecture
 
