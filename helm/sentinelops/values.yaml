@@ -1,12 +1,12 @@
 image:
   registry: ghcr.io/1priyansh
   prefix: sentinelops-
-  tag: latest            # default for services without their own tag
+  tag: latest # default for services without their own tag
   pullPolicy: IfNotPresent
 
 resources:
-  requests: {cpu: 50m, memory: 64Mi}
-  limits: {cpu: 250m, memory: 256Mi}
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { cpu: 250m, memory: 256Mi }
 
 services:
   - name: gateway
@@ -16,7 +16,7 @@ services:
   - name: order-service
   - name: payment-service
   - name: ai-incident-assistant
-    tag: "bc0f8911d309285f4f92dc04b7cf7235293785ef"   # pinned to an exact commit
-    envFromSecret: ai-keys   # optional Secret holding ANTHROPIC_API_KEY
+    tag: "6e46066a840f45993e6339f4e60dd75d6d5552d9" # pinned to an exact commit
+    envFromSecret: ai-keys # optional Secret holding ANTHROPIC_API_KEY
     persistence:
-      size: 100Mi            # incidents are stored on a persistent volume at /data
+      size: 100Mi # incidents are stored on a persistent volume at /data
