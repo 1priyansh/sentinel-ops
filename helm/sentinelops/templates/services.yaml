@@ -1,4 +1,5 @@
 {{- range .Values.services }}
+{{- $tag := .tag | default $.Values.image.tag }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,6 +7,10 @@ metadata:
   namespace: {{ $.Release.Namespace }}
 spec:
   replicas: {{ .replicas | default 1 }}
+  {{- if .persistence }}
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       app: {{ .name }}
@@ -14,9 +19,13 @@ spec:
       labels:
         app: {{ .name }}
     spec:
+      {{- if .persistence }}
+      securityContext:
+        fsGroup: 1000
+      {{- end }}
       containers:
         - name: {{ .name }}
-          image: "{{ $.Values.image.registry }}/{{ $.Values.image.prefix }}{{ .name }}:{{ $.Values.image.tag }}"
+          image: "{{ $.Values.image.registry }}/{{ $.Values.image.prefix }}{{ .name }}:{{ $tag }}"
           imagePullPolicy: {{ $.Values.image.pullPolicy }}
           ports:
             - containerPort: 8000
@@ -28,12 +37,26 @@ spec:
             periodSeconds: 5
           resources:
             {{- toYaml $.Values.resources | nindent 12 }}
+          {{- if .persistence }}
+          env:
+            - name: DATA_DIR
+              value: /data
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
           {{- if .envFromSecret }}
           envFrom:
             - secretRef:
                 name: {{ .envFromSecret }}
                 optional: true
           {{- end }}
+      {{- if .persistence }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .name }}-data
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -47,4 +70,17 @@ spec:
     - port: 8000
       targetPort: 8000
 ---
+{{- if .persistence }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .name }}-data
+  namespace: {{ $.Release.Namespace }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .persistence.size | default "100Mi" }}
+---
+{{- end }}
 {{- end }}
