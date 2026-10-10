@@ -46,6 +46,48 @@ async def get_err_rate(svc):
     except Exception:
         return None
 
+JIRA_URL = os.getenv("JIRA_URL", "").rstrip("/")
+JIRA_EMAIL = os.getenv("JIRA_EMAIL", "")
+JIRA_TOKEN = os.getenv("JIRA_TOKEN", "")
+JIRA_PROJECT = os.getenv("JIRA_PROJECT", "SENT")
+JIRA_ISSUE_TYPE = os.getenv("JIRA_ISSUE_TYPE", "Task")
+
+def adf(text):  # Jira Cloud v3 wants Atlassian Document Format for text fields
+    paras = [{"type": "paragraph", "content": [{"type": "text", "text": ln}]} for ln in text.split("\n") if ln.strip()]
+    return {"type": "doc", "version": 1, "content": paras or [{"type": "paragraph", "content": []}]}
+
+async def jira(method, path, **kw):
+    if not (JIRA_URL and JIRA_EMAIL and JIRA_TOKEN):
+        return None  # Jira not configured: skip silently
+    try:
+        async with httpx.AsyncClient(timeout=15, auth=(JIRA_EMAIL, JIRA_TOKEN)) as c:
+            r = await c.request(method, f"{JIRA_URL}/rest/api/3{path}", **kw)
+        if r.status_code >= 400:
+            log("ERROR", "jira call failed", status=r.status_code, body=r.text[:200])
+            return None
+        return r.json() if r.text else {}
+    except Exception as e:
+        log("ERROR", "jira call error", error=str(e))
+        return None
+
+async def jira_open(inc):
+    res = await jira("POST", "/issue", json={"fields": {
+        "project": {"key": JIRA_PROJECT},
+        "summary": f"[{inc['severity']}] {inc['service']}: {inc['alert']} ({inc['id']})",
+        "issuetype": {"name": JIRA_ISSUE_TYPE},
+        "labels": ["sentinelops", "incident", inc["severity"]],
+        "description": adf(inc["ai_summary"])}})
+    if res:
+        inc["jira_key"] = res["key"]
+        log("INFO", "jira ticket created", id=inc["id"], jira=res["key"])
+
+async def jira_move(key, category):  # category: "indeterminate" (in progress) or "done"
+    t = await jira("GET", f"/issue/{key}/transitions")
+    for x in (t or {}).get("transitions", []):
+        if x["to"]["statusCategory"]["key"] == category:
+            await jira("POST", f"/issue/{key}/transitions", json={"transition": {"id": x["id"]}})
+            return
+
 async def analyze(alert, svc, logs, rate):
     ctx = f"Alert: {alert}\nService: {svc}\n5xx rate/sec: {rate}\nRecent error logs:\n" + "\n".join(logs[:15])
     if KEY:
@@ -74,6 +116,8 @@ async def webhook(req: Request):
                    "ai_summary": await analyze(name, svc, logs, rate)}
             INC.append(inc)
             save()
+            await jira_open(inc)
+            save()
             log("INFO", "incident created", id=inc["id"], severity=inc["severity"])
             if SLACK:
                 async with httpx.AsyncClient() as c:
@@ -82,6 +126,9 @@ async def webhook(req: Request):
             open_inc.update(status="Resolved", resolved_at=time.time())
             open_inc["mttr_sec"] = round(open_inc["resolved_at"] - open_inc["opened_at"])
             save()
+            if open_inc.get("jira_key"):
+                await jira("POST", f"/issue/{open_inc['jira_key']}/comment", json={"body": adf(f"Resolved automatically. MTTR: {open_inc['mttr_sec']} seconds.")})
+                await jira_move(open_inc["jira_key"], "done")
             log("INFO", "incident resolved", id=open_inc["id"], mttr_sec=open_inc["mttr_sec"])
     return {"ok": True}
 
@@ -89,10 +136,13 @@ async def webhook(req: Request):
 def incidents(): return INC
 
 @app.post("/incidents/{iid}/ack")
-def ack(iid: str):
+async def ack(iid: str):
     for i in INC:
         if i["id"] == iid and i["status"] == "Open":
             i["status"] = "Acknowledged"
             save()
+            if i.get("jira_key"):
+                await jira("POST", f"/issue/{i['jira_key']}/comment", json={"body": adf("Acknowledged by on-call engineer.")})
+                await jira_move(i["jira_key"], "indeterminate")
             return i
     raise HTTPException(404, "not found or not open")
