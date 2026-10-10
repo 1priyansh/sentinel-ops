@@ -28,6 +28,19 @@ A microservices platform on Kubernetes with full observability (Prometheus, Graf
 
 ![Pods running](Images/PODs_Running.png)
 
+## GitOps with ArgoCD
+
+Deployments are driven by Git. ArgoCD watches this repo and keeps the cluster in sync
+with the Helm chart in `helm/sentinelops`.
+
+![ArgoCD synced and healthy](Images/argocd-synced.png)
+
+**Proof of the loop:** I changed `replicas: 2` for the gateway in `values.yaml` and pushed.
+ArgoCD deployed it with no manual commands. When I scaled the gateway down by hand with
+`kubectl`, ArgoCD detected the drift and restored 2 replicas (self-heal).
+
+![Gateway running 2 replicas](Images/gateway-2-replicas.png)
+
 ## Architecture
 
 ```mermaid
