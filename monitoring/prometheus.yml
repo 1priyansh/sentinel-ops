@@ -1,0 +1,8 @@
+global: {scrape_interval: 5s, evaluation_interval: 5s}
+rule_files: [alerts.yml]
+alerting:
+  alertmanagers: [{static_configs: [{targets: ["alertmanager:9093"]}]}]
+scrape_configs:
+  - job_name: services
+    static_configs:
+      - targets: [gateway:8000, user-service:8000, product-service:8000, order-service:8000, payment-service:8000, ai-incident-assistant:8000]

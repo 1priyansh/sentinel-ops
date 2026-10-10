@@ -1,0 +1,17 @@
+server: {http_listen_port: 9080}
+positions: {filename: /tmp/positions.yaml}
+clients: [{url: "http://loki:3100/loki/api/v1/push"}]
+scrape_configs:
+  - job_name: pods
+    pipeline_stages: [{cri: {}}]
+    kubernetes_sd_configs: [{role: pod}]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: .+
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: service
+      - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+        separator: /
+        replacement: /var/log/pods/*$1/*.log
+        target_label: __path__
