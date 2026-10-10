@@ -41,6 +41,22 @@ ArgoCD deployed it with no manual commands. When I scaled the gateway down by ha
 
 ![Gateway running 2 replicas](Images/gateway-2-replicas.png)
 
+## Dashboard and SLO
+
+A Grafana dashboard (`monitoring/grafana/dashboards/sentinelops.json`) tracks service health and
+a reliability target for payments: **99.5% of requests succeed**. The remaining 0.5% is the
+error budget. During a fault, availability drops below target and the budget burns down.
+
+### Healthy system
+
+![SLO dashboard, healthy](Images/slo-dashboard-healthy.png)
+
+### During a payment fault
+
+![SLO dashboard during a fault](Images/slo-dashboard.png)
+
+Import it in Grafana: Dashboards, New, Import, upload the JSON, select Prometheus and Loki.
+
 ## Architecture
 
 ```mermaid

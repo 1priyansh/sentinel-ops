@@ -1,8 +1,0 @@
-groups:
-  - name: sentinelops
-    rules:
-      - alert: PaymentHighErrorRate
-        expr: sum(rate(http_requests_total{service="payment-service",status=~"5.."}[1m])) / sum(rate(http_requests_total{service="payment-service"}[1m])) > 0.2
-        for: 20s
-        labels: {severity: P2, service: payment-service}
-        annotations: {summary: "payment-service error rate above 20%", runbook: "docs/runbooks/payment-errors.md"}
