@@ -1,8 +1,26 @@
-import os, time, httpx
+import os, time, json, httpx
 from fastapi import Request, HTTPException
 from common import create_app, log
 app = create_app()
-INC = []  # in-memory incident (ITSM ticket) store
+DATA_FILE = os.path.join(os.getenv("DATA_DIR", "/data"), "incidents.json")
+
+def load():
+    try:
+        with open(DATA_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save():  # write to a temp file first, then swap, so a crash never leaves a half-written file
+    try:
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        with open(DATA_FILE + ".tmp", "w") as f:
+            json.dump(INC, f)
+        os.replace(DATA_FILE + ".tmp", DATA_FILE)
+    except Exception as e:
+        log("ERROR", "could not save incidents", error=str(e))
+
+INC = load()  # incident (ITSM ticket) store, reloaded from disk on startup
 LOKI = os.getenv("LOKI_URL", "http://loki:3100")
 PROM = os.getenv("PROM_URL", "http://prometheus:9090")
 KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -55,6 +73,7 @@ async def webhook(req: Request):
                    "status": "Open", "opened_at": time.time(), "resolved_at": None, "mttr_sec": None,
                    "ai_summary": await analyze(name, svc, logs, rate)}
             INC.append(inc)
+            save()
             log("INFO", "incident created", id=inc["id"], severity=inc["severity"])
             if SLACK:
                 async with httpx.AsyncClient() as c:
@@ -62,6 +81,7 @@ async def webhook(req: Request):
         elif a["status"] == "resolved" and open_inc:
             open_inc.update(status="Resolved", resolved_at=time.time())
             open_inc["mttr_sec"] = round(open_inc["resolved_at"] - open_inc["opened_at"])
+            save()
             log("INFO", "incident resolved", id=open_inc["id"], mttr_sec=open_inc["mttr_sec"])
     return {"ok": True}
 
@@ -72,5 +92,7 @@ def incidents(): return INC
 def ack(iid: str):
     for i in INC:
         if i["id"] == iid and i["status"] == "Open":
-            i["status"] = "Acknowledged"; return i
+            i["status"] = "Acknowledged"
+            save()
+            return i
     raise HTTPException(404, "not found or not open")
