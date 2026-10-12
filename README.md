@@ -57,6 +57,25 @@ error budget. During a fault, availability drops below target and the budget bur
 
 Import it in Grafana: Dashboards, New, Import, upload the JSON, select Prometheus and Loki.
 
+## Jira integration (ITSM)
+
+When an alert fires, the assistant creates a Jira ticket with the AI-written summary. It adds
+a comment and moves the ticket to In Progress when the incident is acknowledged, then adds the
+MTTR and moves it to Done when the incident resolves. Incidents are stored on a persistent
+volume, so they survive pod restarts.
+
+![Jira ticket created by the assistant](Images/jira-ticket.png)
+
+![Jira board with the incident in Done](Images/jira-board-done.png)
+
+Credentials are kept in a Kubernetes Secret, never in Git:
+
+    kubectl -n sentinelops create secret generic ai-keys \
+      --from-literal=JIRA_URL=https://<your-site>.atlassian.net \
+      --from-literal=JIRA_EMAIL='<email>' \
+      --from-literal=JIRA_TOKEN='<api-token>' \
+      --from-literal=JIRA_PROJECT=SENT
+
 ## Architecture
 
 ```mermaid
