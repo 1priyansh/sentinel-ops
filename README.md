@@ -76,6 +76,21 @@ Credentials are kept in a Kubernetes Secret, never in Git:
       --from-literal=JIRA_TOKEN='<api-token>' \
       --from-literal=JIRA_PROJECT=SENT
 
+## Autoscaling
+
+The gateway has a HorizontalPodAutoscaler (min 2, max 5 pods, target 60% CPU). Under extra
+load, CPU rose to over 200% of the target and Kubernetes scaled the gateway from 2 to 5 pods
+automatically. When the load stopped, it scaled back down. The replica count is owned by the
+autoscaler, not by Git, so ArgoCD does not fight it.
+
+### Scaling up under load
+
+![HPA scaling the gateway from 2 to 5 pods](Images/hpa-scaling.png)
+
+### Scaling back down after the load stops
+
+![HPA scaled back down to 2 pods](Images/hpa-scaled-down.png)
+
 ## Architecture
 
 ```mermaid
