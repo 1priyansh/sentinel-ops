@@ -6,7 +6,9 @@ metadata:
   name: {{ .name }}
   namespace: {{ $.Release.Namespace }}
 spec:
+  {{- if not .autoscaling }}
   replicas: {{ .replicas | default 1 }}
+  {{- end }}
   {{- if .persistence }}
   strategy:
     type: Recreate
@@ -36,7 +38,7 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 5
           resources:
-            {{- toYaml $.Values.resources | nindent 12 }}
+            {{- toYaml (.resources | default $.Values.resources) | nindent 12 }}
           {{- if .persistence }}
           env:
             - name: DATA_DIR
@@ -70,6 +72,28 @@ spec:
     - port: 8000
       targetPort: 8000
 ---
+{{- if .autoscaling }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .name }}
+  minReplicas: {{ .autoscaling.minReplicas | default 1 }}
+  maxReplicas: {{ .autoscaling.maxReplicas | default 3 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .autoscaling.targetCPU | default 60 }}
+---
+{{- end }}
 {{- if .persistence }}
 apiVersion: v1
 kind: PersistentVolumeClaim
